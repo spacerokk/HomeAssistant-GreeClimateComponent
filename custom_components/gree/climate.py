@@ -55,6 +55,7 @@ DEFAULT_NAME = 'Gree Climate'
 
 CONF_TARGET_TEMP_STEP = 'target_temp_step'
 CONF_TEMP_SENSOR = 'temp_sensor'
+CONF_INNER_TEMP_SENSOR_CORELLATION = 'inner_temp_sensor_corellation'
 CONF_LIGHTS = 'lights'
 CONF_XFAN = 'xfan'
 CONF_HEALTH = 'health'
@@ -68,6 +69,7 @@ CONF_UID = 'uid'
 DEFAULT_PORT = 7000
 DEFAULT_TIMEOUT = 10
 DEFAULT_TARGET_TEMP_STEP = 1
+DEFAULT_INNERT_TEMP_SENSOR_CORELLATION = -40
 
 # from the remote control and gree app
 MIN_TEMP_C = 16
@@ -90,6 +92,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): cv.positive_int,
     vol.Optional(CONF_TARGET_TEMP_STEP, default=DEFAULT_TARGET_TEMP_STEP): vol.Coerce(float),
     vol.Optional(CONF_TEMP_SENSOR): cv.entity_id,
+    vol.Optional(CONF_INNER_TEMP_SENSOR_CORELLATION, default=DEFAULT_INNERT_TEMP_SENSOR_CORELLATION): vol.Coerce(float),
     vol.Optional(CONF_LIGHTS): cv.entity_id,
     vol.Optional(CONF_XFAN): cv.entity_id,
     vol.Optional(CONF_HEALTH): cv.entity_id,
@@ -111,6 +114,8 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
 
     target_temp_step = config.get(CONF_TARGET_TEMP_STEP)
     temp_sensor_entity_id = config.get(CONF_TEMP_SENSOR)
+    use_inner_temp_sensor = not temp_sensor_entity_id
+    inner_temp_sensor_corellation = config.get(CONF_INNER_TEMP_SENSOR_CORELLATION)
     lights_entity_id = config.get(CONF_LIGHTS)
     xfan_entity_id = config.get(CONF_XFAN)
     health_entity_id = config.get(CONF_HEALTH)
@@ -126,12 +131,12 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
     
     _LOGGER.info('Adding Gree climate device to hass')
     async_add_devices([
-        GreeClimate(hass, name, ip_addr, port, mac_addr, timeout, target_temp_step, temp_sensor_entity_id, lights_entity_id, xfan_entity_id, health_entity_id, powersave_entity_id, sleep_entity_id, eightdegheat_entity_id, air_entity_id, hvac_modes, fan_modes, swing_modes, encryption_key, uid)
+        GreeClimate(hass, name, ip_addr, port, mac_addr, timeout, target_temp_step, temp_sensor_entity_id, use_inner_temp_sensor, inner_temp_sensor_corellation, lights_entity_id, xfan_entity_id, health_entity_id, powersave_entity_id, sleep_entity_id, eightdegheat_entity_id, air_entity_id, hvac_modes, fan_modes, swing_modes, encryption_key, uid)
     ])
 
 class GreeClimate(ClimateEntity):
 
-    def __init__(self, hass, name, ip_addr, port, mac_addr, timeout, target_temp_step, temp_sensor_entity_id, lights_entity_id, xfan_entity_id, health_entity_id, powersave_entity_id, sleep_entity_id, eightdegheat_entity_id, air_entity_id, hvac_modes, fan_modes, swing_modes, encryption_key=None, uid=None):
+    def __init__(self, hass, name, ip_addr, port, mac_addr, timeout, target_temp_step, temp_sensor_entity_id, use_inner_temp_sensor, inner_temp_sensor_corellation, lights_entity_id, xfan_entity_id, health_entity_id, powersave_entity_id, sleep_entity_id, eightdegheat_entity_id, air_entity_id, hvac_modes, fan_modes, swing_modes, encryption_key=None, uid=None):
         _LOGGER.info('Initialize the GREE climate device')
         self.hass = hass
         self._name = name
@@ -147,6 +152,8 @@ class GreeClimate(ClimateEntity):
         
         self._current_temperature = None
         self._temp_sensor_entity_id = temp_sensor_entity_id
+        self._use_inner_temp_sensor = use_inner_temp_sensor
+        self._inner_temp_sensor_corellation = inner_temp_sensor_corellation
         self._lights_entity_id = lights_entity_id
         self._xfan_entity_id = xfan_entity_id
         self._health_entity_id = health_entity_id
@@ -184,12 +191,15 @@ class GreeClimate(ClimateEntity):
         
         self._acOptions = { 'Pow': None, 'Mod': None, 'SetTem': None, 'WdSpd': None, 'Air': None, 'Blo': None, 'Health': None, 'SwhSlp': None, 'Lig': None, 'SwingLfRig': None, 'SwUpDn': None, 'Quiet': None, 'Tur': None, 'StHt': None, 'TemUn': None, 'HeatCoolType': None, 'TemRec': None, 'SvSt': None, 'SlpMod': None }
 
+        if use_inner_temp_sensor:
+            self._acOptions.update({'TemSen': None})
+
         self._firstTimeRun = True
 
         # Cipher to use to encrypt/decrypt
         self.CIPHER = AES.new(self._encryption_key, AES.MODE_ECB)
 
-        if temp_sensor_entity_id:
+        if not use_inner_temp_sensor:
             _LOGGER.info('Setting up temperature sensor: ' + str(temp_sensor_entity_id))
             async_track_state_change(
                 hass, temp_sensor_entity_id, self._async_temp_sensor_changed)
@@ -297,6 +307,14 @@ class GreeClimate(ClimateEntity):
         replacedPack = decodedPack.replace('\x0f', '').replace(decodedPack[decodedPack.rindex('}')+1:], '')
         receivedJsonPayload = simplejson.loads(replacedPack)
         _LOGGER.info('Done sending state to HVAC: ' + str(receivedJsonPayload))
+
+    def TryUpdateHACurrentTemperature(self):
+        if not self._use_inner_temp_sensor:
+            return    
+        temp = self._acOptions['TemSen'] + self._inner_temp_sensor_corellation
+        if self.represents_float(temp):
+            self._current_temperature = temp
+            _LOGGER.info('Current temp from inner sensor: ' + str(self._current_temperature))
 
     def UpdateHATargetTemperature(self):
         # Sync set temperature to HA. If 8℃ heating is active we set the temp in HA to 8℃ so that it shows the same as the AC display.
@@ -442,6 +460,7 @@ class GreeClimate(ClimateEntity):
         _LOGGER.info('HA fan mode set according to HVAC state to: ' + str(self._fan_mode))
 
     def UpdateHAStateToCurrentACState(self):
+        self.TryUpdateHACurrentTemperature()
         self.UpdateHATargetTemperature()
         self.UpdateHAOptions()
         self.UpdateHAHvacMode()
@@ -453,6 +472,10 @@ class GreeClimate(ClimateEntity):
         _LOGGER.info('Starting SyncState')
 
         optionsToFetch = ["Pow","Mod","SetTem","WdSpd","Air","Blo","Health","SwhSlp","Lig","SwingLfRig","SwUpDn","Quiet","Tur","StHt","TemUn","HeatCoolType","TemRec","SvSt","SlpMod"]
+
+        if self._use_inner_temp_sensor:
+            optionsToFetch.append("TemSen")
+
         currentValues = self.GreeGetValues(optionsToFetch)
 
         # Set latest status from device
