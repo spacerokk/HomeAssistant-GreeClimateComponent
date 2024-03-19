@@ -3,7 +3,7 @@
   "name": "Gree A/C",
   "version": "2.3.1",
   "documentation": "https://github.com/RobHofmann/HomeAssistant-GreeClimateComponent",
-  "dependencies": [],
+  "dependencies": ["network"],
   "codeowners": ["@robhofmann"],
   "requirements": ["pycryptodome"]
 }
