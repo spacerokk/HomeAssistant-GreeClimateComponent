@@ -310,10 +310,19 @@ class GreeClimate(ClimateEntity):
 
     def TryUpdateHACurrentTemperature(self):
         if not self._use_inner_temp_sensor:
-            return    
-        temp = self._acOptions['TemSen'] + self._inner_temp_sensor_corellation
-        if self.represents_float(temp):
-            self._current_temperature = temp
+            return
+
+        temp_c = self._acOptions['TemSen'] + self._inner_temp_sensor_corellation
+        temp_f = self.gree_c_to_f(SetTem=temp_c, TemRec=0) # TemRec is only seems to be for SetTem
+
+        if (self._unit_of_measurement == "°C"):
+            current_temp = temp_c
+        else:
+            current_temp = temp_f
+
+
+        if self.represents_float(current_temp):
+            self._current_temperature = current_temp
             _LOGGER.info('Current temp from inner sensor: ' + str(self._current_temperature))
 
     def UpdateHATargetTemperature(self):
