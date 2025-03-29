@@ -456,11 +456,11 @@ class GreeClimate(ClimateEntity):
                 if target_temp_state:
                     attr = target_temp_state.attributes
                     self.hass.states.async_set(self._target_temp_entity_id, float(self._target_temperature), attr)
-                    _LOGGER.info(f"(ASYNC) set:  {self._target_temp_entity_id} to {self._target_temperature}")
-                    _LOGGER.info(f"{self._target_temp_entity_id} attr: {attr}")
+                    _LOGGER.info(f"UpdateHATargetTemperature: (ASYNC) set:  {self._target_temp_entity_id} to {self._target_temperature}")
+                    _LOGGER.info(f"UpdateHATargetTemperature: {self._target_temp_entity_id} attr: {attr}")
 
-            _LOGGER.info('HA target temp set according to HVAC state to: ' + str(self._target_temperature) + str(self._unit_of_measurement))
-            _LOGGER.info('Device commands: SetTem: ' + str(
+            _LOGGER.info('UpdateHATargetTemperature: HA target temp set according to HVAC state to: ' + str(self._target_temperature) + str(self._unit_of_measurement))
+            _LOGGER.info('UpdateHATargetTemperature: Device commands: SetTem: ' + str(
                 self._acOptions['SetTem']) + ", TemRec: " + str(self._acOptions['TemRec']))
 
     def UpdateHAOptions(self):
@@ -745,21 +745,21 @@ class GreeClimate(ClimateEntity):
         
     @callback
     def _async_update_current_temp(self, state):
-        _LOGGER.info('(ASYNC): Thermostat updated with changed temp_sensor state | ' + str(state.state))
+        _LOGGER.info('async_update_current_temp: (ASYNC): Thermostat updated with changed temp_sensor state | ' + str(state.state))
         unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
-        _LOGGER.info('(ASYNC): temp_sensor state unit |' + str(unit))
+        _LOGGER.info('(ASYNC): temp_sensor state unit | ' + str(unit))
         try:
             _state = state.state
-            _LOGGER.info('(ASYNC): Current state temp_sensor: ' + _state)
+            _LOGGER.info('async_update_current_temp: (ASYNC): Current state temp_sensor: ' + _state)
             if self.represents_float(_state):
                 self._current_temperature = self.hass.config.units.temperature(
                     float(_state), unit)
-                _LOGGER.info('(ASYNC): Current temp: ' + str(self._current_temperature))
+                _LOGGER.info('async_update_current_temp: (ASYNC): Current temp: ' + str(self._current_temperature))
         except ValueError as ex:
-            _LOGGER.error('(ASYNC): Unable to update from temp_sensor: %s' % ex)
+            _LOGGER.error('async_update_current_temp: (ASYNC): Unable to update from temp_sensor: %s' % ex)
 
     def represents_float(self, s):
-        _LOGGER.info('temperature sensor state represents_float |' + str(s))
+        _LOGGER.info('temperature sensor state represents_float | ' + str(s))
         try: 
             float(s)
             return True
@@ -1121,9 +1121,9 @@ class GreeClimate(ClimateEntity):
     @callback
     def _async_update_current_target_temp(self, state):
         s = int(float(state.state))
-        _LOGGER.info('(ASYNC): Updating HVAC with changed target_temp_entity state | ' + str(s))
+        _LOGGER.info('async_update_current_target_temp: (ASYNC): Updating HVAC with changed target_temp_entity state | ' + str(s))
         unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
-        _LOGGER.info('(ASYNC): target_temp_entity state unit |' + str(unit))
+        _LOGGER.info('async_update_current_target_temp: (ASYNC): target_temp_entity state unit | ' + str(unit))
 
         if (s >= self.min_temp) and (s <= self.max_temp):
             if (self._unit_of_measurement == "°C"):
@@ -1135,11 +1135,11 @@ class GreeClimate(ClimateEntity):
             self.SyncState({'SetTem': int(SetTem)})
             self.SyncState({'TemRec': int(TemRec)})
 
-            _LOGGER.info('(ASYNC): Set Temp to ' + str(s) + str(self._unit_of_measurement)
+            _LOGGER.info('async_update_current_target_temp: (ASYNC): Set Temp to ' + str(s) + str(self._unit_of_measurement)
                          + ' ->  SyncState with SetTem=' + str(SetTem) + ', SyncState with TemRec=' + str(TemRec))
             return
 
-        _LOGGER.error('(ASYNC): Unable to update from target_temp_entity!')
+        _LOGGER.error('async_update_current_target_temp: (ASYNC): Unable to update from target_temp_entity!')
 
 
 
