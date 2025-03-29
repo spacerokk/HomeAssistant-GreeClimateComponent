@@ -456,6 +456,8 @@ class GreeClimate(ClimateEntity):
                 if target_temp_state:
                     attr = target_temp_state.attributes
                     self.hass.states.async_set(self._target_temp_entity_id, float(self._target_temperature), attr)
+                    _LOGGER.info(f"async set:  {self._target_temp_entity_id}")
+                    _LOGGER.info(f"{self._target_temp_entity_id} attr: {attr}")
 
             _LOGGER.info('HA target temp set according to HVAC state to: ' + str(self._target_temperature) + str(self._unit_of_measurement))
             _LOGGER.info('Device commands: SetTem: ' + str(
@@ -745,6 +747,7 @@ class GreeClimate(ClimateEntity):
     def _async_update_current_temp(self, state):
         _LOGGER.info('Thermostat updated with changed temp_sensor state | ' + str(state.state))
         unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
+        _LOGGER.info('temp_sensor state unit |' + str(unit))
         try:
             _state = state.state
             _LOGGER.info('Current state temp_sensor: ' + _state)
@@ -1117,10 +1120,26 @@ class GreeClimate(ClimateEntity):
     def _async_update_current_target_temp(self, state):
         s = int(float(state.state))
         _LOGGER.info('Updating HVAC with changed target_temp_entity state | ' + str(s))
-        if (s >= MIN_TEMP) and (s <= MAX_TEMP):
-            self.SyncState({'SetTem': s})
+        unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
+        _LOGGER.info('target_temp_entity state unit |' + str(unit))
+
+        if (s >= self.min_temp) and (s <= self.max_temp):
+            if (self._unit_of_measurement == "°C"):
+                SetTem = s
+                TemRec = 0
+            else:
+                SetTem, TemRec = self.gree_f_to_c(desired_temp_f=s)
+
+            self.SyncState({'SetTem': int(SetTem)})
+            self.SyncState({'TemRec': int(TemRec)})
+
+            _LOGGER.info('(ASYNC): Set Temp to ' + str(s) + str(self._unit_of_measurement)
+                         + ' ->  SyncState with SetTem=' + str(SetTem) + ', SyncState with TemRec=' + str(TemRec))
             return
+
         _LOGGER.error('Unable to update from target_temp_entity!')
+
+
 
     @property
     def should_poll(self):
@@ -1150,7 +1169,7 @@ class GreeClimate(ClimateEntity):
                 if self.GetDeviceKeyGCM():
                     self.SyncState()
             else:
-                _LOGGER.error('Encryption version %s is not implemented.' % encryption_version)
+                _LOGGER.error('Encryption version %s is not implemented.' % self.encryption_version)
         else:
             self.SyncState()
 
