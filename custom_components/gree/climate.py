@@ -451,14 +451,15 @@ class GreeClimate(ClimateEntity):
 
             #TODO: Check if we need to use the code below
 
-            # if self._target_temp_entity_id:
-            #     target_temp_state = self.hass.states.get(self._target_temp_entity_id)
-            #     if target_temp_state:
-            #         attr = target_temp_state.attributes
-            #         if self._target_temperature in range(MIN_TEMP, MAX_TEMP+1):
-            #             self.hass.states.async_set(self._target_temp_entity_id, float(self._target_temperature), attr)
+            if self._target_temp_entity_id:
+                target_temp_state = self.hass.states.get(self._target_temp_entity_id)
+                if target_temp_state:
+                    attr = target_temp_state.attributes
+                    self.hass.states.async_set(self._target_temp_entity_id, float(self._target_temperature), attr)
 
-            _LOGGER.info('HA target temp set according to HVAC state to: ' + str(self._acOptions['SetTem']))
+            _LOGGER.info('HA target temp set according to HVAC state to: ' + str(self._target_temperature) + str(self._unit_of_measurement))
+            _LOGGER.info('Device commands: SetTem: ' + str(
+                self._acOptions['SetTem']) + ", TemRec: " + str(self._acOptions['TemRec']))
 
     def UpdateHAOptions(self):
         # Sync HA with retreived HVAC options
@@ -618,7 +619,7 @@ class GreeClimate(ClimateEntity):
                 else:
                     self._current_temperature = temp_f
 
-                _LOGGER.info('HA current temperature set with device built-in temperature sensor state : ' + str(self._current_temperature))
+                _LOGGER.info('HA current temperature set with device built-in temperature sensor state : ' + str(self._current_temperature) + str(self._unit_of_measurement))
 
     def UpdateHAStateToCurrentACState(self):
         self.UpdateHATargetTemperature()
@@ -1273,6 +1274,8 @@ class GreeClimate(ClimateEntity):
 
     def set_temperature(self, **kwargs):
         _LOGGER.info('set_temperature(): ' + str(kwargs.get(ATTR_TEMPERATURE)) + str(self._unit_of_measurement))
+        units = str(kwargs.get(ATTR_UNIT_OF_MEASUREMENT))
+        _LOGGER.info('set_temperature_units: ' + str(units))
         # Set new target temperatures.
         if kwargs.get(ATTR_TEMPERATURE) is not None:
             # do nothing if temperature is none
