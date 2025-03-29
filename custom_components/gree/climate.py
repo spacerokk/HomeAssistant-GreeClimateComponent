@@ -1132,8 +1132,7 @@ class GreeClimate(ClimateEntity):
             else:
                 SetTem, TemRec = self.gree_f_to_c(desired_temp_f=s)
 
-            self.SyncState({'SetTem': int(SetTem)})
-            self.SyncState({'TemRec': int(TemRec)})
+            self.SyncState({'SetTem': int(SetTem), 'TemRec': int(TemRec)})
 
             _LOGGER.info('async_update_current_target_temp: (ASYNC): Set Temp to ' + str(s) + str(self._unit_of_measurement)
                          + ' ->  SyncState with SetTem=' + str(SetTem) + ', SyncState with TemRec=' + str(TemRec))
@@ -1309,8 +1308,7 @@ class GreeClimate(ClimateEntity):
                 else:
                     SetTem, TemRec = self.gree_f_to_c(desired_temp_f=kwargs.get(ATTR_TEMPERATURE))
 
-                self.SyncState({'SetTem': int(SetTem)})
-                self.SyncState({'TemRec': int(TemRec)})
+                self.SyncState({'SetTem': int(SetTem), 'TemRec': int(TemRec)})
                 _LOGGER.info('Set Temp to ' + str(kwargs.get(ATTR_TEMPERATURE)) + str(self._unit_of_measurement)
                              + ' ->  SyncState with SetTem=' + str(SetTem) + ', SyncState with TemRec=' + str(TemRec))
 
