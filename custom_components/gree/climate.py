@@ -610,10 +610,15 @@ class GreeClimate(ClimateEntity):
 
     def UpdateHACurrentTemperature(self):
         if not self._temp_sensor_entity_id:
-            if self._has_temp_sensor:          
+            if self._has_temp_sensor:
+
+                _LOGGER("method UpdateHACurrentTemperature: TemSen:" + str(self._acOptions['TemSen']))
 
                 temp_c = self._acOptions['TemSen'] + TEMP_OFFSET # Get the temperature from the device
                 temp_f = self.gree_c_to_f(SetTem=temp_c, TemRec=0) # Convert to Fahrenheit using TemRec bit
+
+                _LOGGER("method UpdateHACurrentTemperature: temp_c" + str(temp_c))
+                _LOGGER("method UpdateHACurrentTemperature: temp_f" + str(temp_f))
 
                 if (self._unit_of_measurement == "°C"):
                     self._current_temperature = temp_c
